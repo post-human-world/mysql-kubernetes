@@ -1,4 +1,4 @@
-# MySQL
+# MySQL High availability cluster
 
 ## MySQL Operator
 

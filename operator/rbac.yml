@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mysql-sa
+  namespace: mysql-cluster
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mysql-clusterrole
+  namespace: mysql-cluster
+rules:
+  - apiGroups: [""]
+    resources: ["statefulsets", "namespaces", "poddisruptionbudgets", "events"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["mysql.oracle.com", "zalando.org", "apiextensions.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: [""]
+    resources: ["cronjobs", "deployments", "pods"] # backup, router, cluster-management
+    verbs: ["get", "watch", "create", "delete", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mysql-clusterrolebinding
+  namespace: mysql-cluster
+subjects:
+  - kind: ServiceAccount
+    name: mysql-sa
+    namespace: mysql-cluster
+roleRef:
+  kind: ClusterRole
+  name: mysql-clusterrole
+  apiGroup: rbac.authorization.k8s.io

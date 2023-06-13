@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: mysql-cluster
+type: Opaque
+stringData:
+  rootUser: root
+  rootHost: "%"
+  rootPassword: <password-of-root-user-jecawe>
+---
+apiVersion: mysql.oracle.com/v2
+kind: InnoDBCluster
+metadata:
+  name: mysql-innodb
+  namespace: mysql-cluster
+spec:
+  secretName: mysql-secret
+  serviceAccountName: mysql-sa
+  tlsUseSelfSigned: true
+  baseServerId: 1000
+  edition: community
+  imagePullPolicy: IfNotPresent
+  version: 8.0.33
+  router:
+    instances: 2
+    podSpec:
+      containers:
+        - name: router
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1
+              memory: 4Gi
+  instances: 5
+  podLabels:
+    type: mysql-innodb
+  podSpec:
+    containers:
+      - name: mysql
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 20
+            preference:
+              matchExpressions:
+                - key: diskType
+                  operator: In
+                  values:
+                    - ssd
+                    - highio
+  datadirVolumeClaimTemplate:
+    accessModes:
+      - ReadWriteOnce
+    storageClassName: standard
+    resources:
+      requests:
+        storage: 40Gi
+  mycnf: |
+    [mysqld]
+    innodb_buffer_pool_size=1G
+    max_connections=256
+  backupProfiles:
+    - name: dump
+      dumpInstance:
+        storage:
+          persistentVolumeClaim:
+            claimName: backup-pvc
+  backupSchedules:
+    - name: every-day-of-week-dump-backup
+      schedule: "0 0 * * */1"
+      backupProfileName: dump
+      deleteBackupData: true
+      enabled: true
+  # This part is remote cluster replication, multiple primary. But you have to manually configure synchronization
+  #initDB:
+  #  clone:
+  #    # <pod-name>.<service-name>.<namespace>.svc.cluster.local:<service-port>
+  #    donorUrl: mysql-innodb-0.mysql-innodb-instances.mysql-second-cluster.svc.cluster.local:3306
+  #    rootUser: root
+  #    secretKeyRef:
+  #      name: mysql-secret

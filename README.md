@@ -38,7 +38,7 @@ The main disadvantage of MySQL Operator is it needs long time to delete cluster.
 
 If you wanna deploy a middle size cluster this should be a good choice. Comparing to Elastic Operator, MySQL Operator is lacks of custom settings, it can not separate primary and secondary pod settings.
 
-## Mention
+## Notes
 
 ## Can't delete MySQL objects even applying force delete - MySQL Operator
 
